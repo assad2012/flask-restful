@@ -4,7 +4,6 @@ from werkzeug.datastructures import MultiDict, FileStorage
 from werkzeug import exceptions
 import flask_restful
 import decimal
-import inspect
 import six
 
 
@@ -55,19 +54,22 @@ class Argument(object):
         iterator. The last item listed takes precedence in the result set.
     :param choices: A container of the allowable values for the argument.
     :param help: A brief description of the argument, returned in the
-        response when the argument is invalid with the name of the argument and
-        the message passed to any exception raised by a type converter.
+        response when the argument is invalid. May optionally contain
+        an "{error_msg}" interpolation token, which will be replaced with
+        the text of the error raised by the type converter.
     :param bool case_sensitive: Whether argument values in the request are
         case sensitive or not (this will convert all values to lowercase)
     :param bool store_missing: Whether the arguments default value should
         be stored if the argument is missing from the request.
     :param bool trim: If enabled, trims whitespace around the argument.
+    :param bool nullable: If enabled, allows null value in argument.
     """
 
     def __init__(self, name, default=None, dest=None, required=False,
                  ignore=False, type=text_type, location=('json', 'values',),
                  choices=(), action='store', help=None, operators=('=',),
-                 case_sensitive=True, store_missing=True, trim=False):
+                 case_sensitive=True, store_missing=True, trim=False,
+                 nullable=True):
         self.name = name
         self.default = default
         self.dest = dest
@@ -82,6 +84,7 @@ class Argument(object):
         self.operators = operators
         self.store_missing = store_missing
         self.trim = trim
+        self.nullable = nullable
 
     def source(self, request):
         """Pulls values off the request in the provided location
@@ -108,7 +111,10 @@ class Argument(object):
     def convert(self, value, op):
         # Don't cast None
         if value is None:
-            return None
+            if self.nullable:
+                return None
+            else:
+                raise ValueError('Must not be null!')
 
         # and check if we're expecting a filestorage and haven't overridden `type`
         # (required because the below instantiation isn't valid for FileStorage)
@@ -135,12 +141,12 @@ class Argument(object):
             dict with the name of the argument and the error message to be
             bundled
         """
-        help_str = '(%s) ' % self.help if self.help else ''
-        error_msg = ' '.join([help_str, str(error)]) if help_str else str(error)
+        error_str = six.text_type(error)
+        error_msg = self.help.format(error_msg=error_str) if self.help else error_str
+        msg = {self.name: error_msg}
+
         if current_app.config.get("BUNDLE_ERRORS", False) or bundle_errors:
-            msg = {self.name: "%s" % (error_msg)}
             return error, msg
-        msg = {self.name: "%s" % (error_msg)}
         flask_restful.abort(400, message=msg)
 
     def parse(self, request, bundle_errors=False):
@@ -272,7 +278,7 @@ class RequestParser(object):
         #Do not know what other argument classes are out there
         if self.trim and self.argument_class is Argument:
             #enable trim for appended element
-            self.args[-1].trim = True
+            self.args[-1].trim = kwargs.get('trim', self.trim)
 
         return self
 
@@ -311,6 +317,8 @@ class RequestParser(object):
         """ Creates a copy of this RequestParser with the same set of arguments """
         parser_copy = self.__class__(self.argument_class, self.namespace_class)
         parser_copy.args = deepcopy(self.args)
+        parser_copy.trim = self.trim
+        parser_copy.bundle_errors = self.bundle_errors
         return parser_copy
 
     def replace_argument(self, name, *args, **kwargs):

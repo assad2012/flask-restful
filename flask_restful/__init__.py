@@ -7,10 +7,11 @@ from flask import abort as original_flask_abort
 from flask import make_response as original_flask_make_response
 from flask.views import MethodView
 from flask.signals import got_request_exception
+from werkzeug.datastructures import Headers
 from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound, NotAcceptable, InternalServerError
 from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.wrappers import Response as ResponseBase
-from flask_restful.utils import error_data, unpack, OrderedDict
+from flask_restful.utils import http_status_message, unpack, OrderedDict
 from flask_restful.representations.json import output_json
 import sys
 from flask.helpers import _endpoint_from_view_func
@@ -33,7 +34,7 @@ def abort(http_status_code, **kwargs):
             e.data = kwargs
         raise
 
-DEFAULT_REPRESENTATIONS = {'application/json': output_json}
+DEFAULT_REPRESENTATIONS = [('application/json', output_json)]
 
 
 class Api(object):
@@ -75,7 +76,7 @@ class Api(object):
                  default_mediatype='application/json', decorators=None,
                  catch_all_404s=False, serve_challenge_on_401=False,
                  url_part_order='bae', errors=None):
-        self.representations = dict(DEFAULT_REPRESENTATIONS)
+        self.representations = OrderedDict(DEFAULT_REPRESENTATIONS)
         self.urls = {}
         self.prefix = prefix
         self.default_mediatype = default_mediatype
@@ -286,33 +287,44 @@ class Api(object):
             else:
                 raise e
 
+        headers = Headers()
         if isinstance(e, HTTPException):
             code = e.code
-            data = error_data(code)
+            default_data = {
+                'message': getattr(e, 'description', http_status_message(code))
+            }
+            headers = e.get_response().headers
         else:
             code = 500
-            data = getattr(e, 'data', error_data(code))
+            default_data = {
+                'message': http_status_message(code),
+            }
 
-        headers = {}
+        # Werkzeug exceptions generate a content-length header which is added
+        # to the response in addition to the actual content-length header
+        # https://github.com/flask-restful/flask-restful/issues/534
+        remove_headers = ('Content-Length',)
+
+        for header in remove_headers:
+            headers.pop(header, None)
+
+        data = getattr(e, 'data', default_data)
 
         if code >= 500:
-            # There's currently a bug in Python3 that disallows calling
-            # logging.exception() when an exception hasn't actually be raised
-            if sys.exc_info() == (None, None, None):
-                current_app.logger.error("Internal Error")
-            else:
-                current_app.logger.exception("Internal Error")
+            exc_info = sys.exc_info()
+            if exc_info[1] is None:
+                exc_info = None
+            current_app.log_exception(exc_info)
 
         help_on_404 = current_app.config.get("ERROR_404_HELP", True)
-        if code == 404 and help_on_404 and ('message' not in data or
-                                            data['message'] == HTTP_STATUS_CODES[404]):
+        if code == 404 and help_on_404:
             rules = dict([(re.sub('(<.*>)', '', rule.rule), rule.rule)
                           for rule in current_app.url_map.iter_rules()])
             close_matches = difflib.get_close_matches(request.path, rules.keys())
             if close_matches:
                 # If we already have a message, add punctuation and continue it.
                 if "message" in data:
-                    data["message"] += ". "
+                    data["message"] = data["message"].rstrip('.') + '. '
                 else:
                     data["message"] = ""
 
@@ -321,9 +333,6 @@ class Api(object):
                                    ' or '.join((
                                        rules[match] for match in close_matches)
                                    ) + ' ?'
-
-        if code == 405:
-            headers['Allow'] = e.valid_methods
 
         error_cls_name = type(e).__name__
         if error_cls_name in self.errors:
@@ -361,6 +370,7 @@ class Api(object):
 
         :param resource: the class name of your resource
         :type resource: :class:`Resource`
+
         :param urls: one or more url routes to match for the resource, standard
                      flask routing rules apply.  Any url variables will be
                      passed to the resource method as args.
@@ -419,7 +429,8 @@ class Api(object):
         resource_class_args = kwargs.pop('resource_class_args', ())
         resource_class_kwargs = kwargs.pop('resource_class_kwargs', {})
 
-        if endpoint in app.view_functions.keys():
+        # NOTE: 'view_functions' is cleaned up from Blueprint class in Flask 1.0
+        if endpoint in getattr(app, 'view_functions', {}):
             previous_view_class = app.view_functions[endpoint].__dict__['view_class']
 
             # if you override the endpoint with a different class, avoid the collision by raising an exception
@@ -579,7 +590,7 @@ class Resource(MethodView):
         if isinstance(resp, ResponseBase):  # There may be a better way to test
             return resp
 
-        representations = self.representations or {}
+        representations = self.representations or OrderedDict()
 
         #noinspection PyUnresolvedReferences
         mediatype = request.accept_mimetypes.best_match(representations, default=None)

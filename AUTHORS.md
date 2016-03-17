@@ -4,7 +4,6 @@ Authors
 A huge thanks to all of our contributors:
 
 
-- Alec Reiter
 - Alex Gaynor
 - Alex M
 - Alex Morken
@@ -17,11 +16,14 @@ A huge thanks to all of our contributors:
 - Axel Haustant
 - Belousow Makc
 - Bennett, Bryan
+- Bohan Zhang
 - Bryan Bennett
 - Bulat Bochkariov
 - Cameron Brandon White
 - Catherine Devlin
 - Dan Quirk
+- Daniele Esposti
+- Dario Bertini
 - David Arnold
 - David Baumgold
 - David Boucha
@@ -30,14 +32,18 @@ A huge thanks to all of our contributors:
 - Doug Black
 - Evan Dale Aromin
 - Frank Stratton
+- Frank Stratton ☺
 - Garret Raziel
 - Gary Belvin
 - Gilles Dartiguelongue
 - Giorgio Salluzzo
 - Guillaume BINET
+- Heston Liebowitz
 - Jacob Magnusson
 - James Booth
 - James Ogura
+- James Turk
+- Jeff Widman
 - Joakim Ekberg
 - Johannes
 - Jordan Yelloz
@@ -55,39 +61,51 @@ A huge thanks to all of our contributors:
 - Lance Ingle
 - Lars Holm Nielsen
 - Luiz Armesto
+- Malthe Borch
 - Marek Hlobil
 - Matt Wright
 - Max Peterson
 - Maxim
 - Michael Hwang
+- Michael Newman
 - Miguel Grinberg
 - Mihai Tomescu
+- Nicolas Harraudeau
 - Pavel Tyslyatsky
 - Petrus J.v.Rensburg
 - Philippe Ndiaye
 - Piotr Husiatyński
 - Prasanna Swaminathan
 - Robert Warner
+- Rod Cloutier
 - Ryan Horn
 - Sam Kimbrel
+- Samarth Shah
 - Sander Sink
 - Sasha Baranov
 - Saul Diez-Guerra
+- Sergey Romanov
 - Sven-Hendrik Haase
 - Usman Ehtesham Gul
 - Victor Neo
+- Vlad Frolov
 - Vladimir Pal
 - WooParadog
 - Yaniv Aknin
 - bret barker
+- hachichaud
+- jbouzekri
+- justanr
 - k-funk
 - kelvinhammond
 - kenjones
+- kumy
 - lyschoening
 - mailto1587
 - mniebla
 - mozillazg
 - muchosalsa
+- nachinius
 - nixdata
 - papaeye
 - pingz
@@ -95,4 +113,5 @@ A huge thanks to all of our contributors:
 - siavashg
 - silasray
 - soasme
+- ueg1990
 - y-p

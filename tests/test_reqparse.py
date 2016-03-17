@@ -18,15 +18,40 @@ class ReqParseTestCase(unittest.TestCase):
         self.assertEquals(arg.help, None)
 
     @patch('flask_restful.abort')
-    def test_help(self, abort):
+    def test_help_with_error_msg(self, abort):
         app = Flask(__name__)
         with app.app_context():
             parser = RequestParser()
-            parser.add_argument('foo', choices=['one', 'two'], help='Bad choice')
+            parser.add_argument('foo', choices=('one', 'two'), help='Bad choice: {error_msg}')
             req = Mock(['values'])
             req.values = MultiDict([('foo', 'three')])
             parser.parse_args(req)
-            expected = {'foo': '(Bad choice)  three is not a valid choice'}
+            expected = {'foo': 'Bad choice: three is not a valid choice'}
+            abort.assert_called_with(400, message=expected)
+
+    @patch('flask_restful.abort')
+    def test_help_with_unicode_error_msg(self, abort):
+        app = Flask(__name__)
+        with app.app_context():
+            parser = RequestParser()
+            parser.add_argument('foo', choices=('one', 'two'), help=u'Bad choice: {error_msg}')
+            req = Mock(['values'])
+            req.values = MultiDict([('foo', u'\xf0\x9f\x8d\x95')])
+            parser.parse_args(req)
+            expected = {'foo': u'Bad choice: \xf0\x9f\x8d\x95 is not a valid choice'}
+            abort.assert_called_with(400, message=expected)
+
+
+    @patch('flask_restful.abort')
+    def test_help_no_error_msg(self, abort):
+        app = Flask(__name__)
+        with app.app_context():
+            parser = RequestParser()
+            parser.add_argument('foo', choices=['one', 'two'], help='Please select a valid choice')
+            req = Mock(['values'])
+            req.values = MultiDict([('foo', 'three')])
+            parser.parse_args(req)
+            expected = {'foo': 'Please select a valid choice'}
             abort.assert_called_with(400, message=expected)
 
     @patch('flask_restful.abort', side_effect=exceptions.BadRequest('Bad Request'))
@@ -153,9 +178,12 @@ class ReqParseTestCase(unittest.TestCase):
         self.assertEquals(arg.source(req), MultiDict(req.headers))
 
     def test_convert_default_type_with_null_input(self):
-        """convert() should properly handle case where input is None"""
         arg = Argument('foo')
         self.assertEquals(arg.convert(None, None), None)
+
+    def test_convert_with_null_input_when_not_nullable(self):
+        arg = Argument('foo', nullable=False)
+        self.assertRaises(ValueError, lambda: arg.convert(None, None))
 
     def test_source_bad_location(self):
         req = Mock(['values'])
@@ -184,7 +212,7 @@ class ReqParseTestCase(unittest.TestCase):
         req = Request.from_values()
         req.view_args = {"foo": "bar"}
         parser = RequestParser()
-        parser.add_argument("foo", location=["view_args"], type=str)
+        parser.add_argument("foo", location=["view_args"])
         args = parser.parse_args(req)
         self.assertEquals(args['foo'], "bar")
 
@@ -193,7 +221,7 @@ class ReqParseTestCase(unittest.TestCase):
         req.json = None
         req.view_args = {"foo": "bar"}
         parser = RequestParser()
-        parser.add_argument("foo", type=str, store_missing=True)
+        parser.add_argument("foo", store_missing=True)
         args = parser.parse_args(req)
         self.assertEquals(args["foo"], None)
 
@@ -571,7 +599,7 @@ class ReqParseTestCase(unittest.TestCase):
         app = Flask(__name__)
 
         parser = RequestParser()
-        parser.add_argument("foo", type=str, location="json")
+        parser.add_argument("foo", location="json")
         with app.test_request_context('/bubble', method="post",
                                       data=json.dumps({"foo": None}),
                                       content_type='application/json'):
@@ -654,7 +682,7 @@ class ReqParseTestCase(unittest.TestCase):
     def test_passing_arguments_object(self):
         req = Request.from_values("/bubble?foo=bar")
         parser = RequestParser()
-        parser.add_argument(Argument("foo", type=str))
+        parser.add_argument(Argument("foo"))
 
         args = parser.parse_args(req)
         self.assertEquals(args['foo'], u"bar")
@@ -711,12 +739,19 @@ class ReqParseTestCase(unittest.TestCase):
         self.assertEquals(args['foo'], 101)
         self.assertEquals(args['bar'], u'baz')
 
+    def test_request_parse_copy_including_settings(self):
+        parser = RequestParser(trim=True, bundle_errors=True)
+        parser_copy = parser.copy()
+
+        self.assertEqual(parser.trim, parser_copy.trim)
+        self.assertEqual(parser.bundle_errors, parser_copy.bundle_errors)
+
     def test_request_parser_replace_argument(self):
         req = Request.from_values("/bubble?foo=baz")
         parser = RequestParser()
         parser.add_argument('foo', type=int)
         parser_copy = parser.copy()
-        parser_copy.replace_argument('foo', type=str)
+        parser_copy.replace_argument('foo')
 
         args = parser_copy.parse_args(req)
         self.assertEquals(args['foo'], u'baz')
@@ -812,6 +847,12 @@ class ReqParseTestCase(unittest.TestCase):
         parser.add_argument('foo', type=int)
         args = parser.parse_args(req)
         self.assertEquals(args['foo'], 1)
+
+    def test_trim_request_parser_override_by_argument(self):
+        parser = RequestParser(trim=True)
+        parser.add_argument('foo', trim=False)
+
+        self.assertFalse(parser.args[0].trim)
 
     def test_trim_request_parser_json(self):
         app = Flask(__name__)

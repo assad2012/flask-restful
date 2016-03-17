@@ -4,6 +4,30 @@ Flask-RESTful Changelog
 Here you can see the full list of changes between each Flask-RESTful release.
 
 
+Version 0.3.5
+-------------
+
+Released December 9, 2015
+
+- Add `nullable` option to request parser to allow/disallow null values for arguments ([#538](https://github.com/flask-restful/flask-restful/pull/538))
+- Use Flask's exception log method in `handle_error(e)` method instead of directly logging the exception notice. ([#496](https://github.com/flask-restful/flask-restful/pull/496))
+- `Argument.help` now allows more flexible message formatting using the `{error_msg}` string interpolation token. ([#518](https://github.com/flask-restful/flask-restful/pull/518))
+- Prevent representation from being chosen at random when `Accept: */*` ([#524](https://github.com/flask-restful/flask-restful/pull/524))
+- Headers from `HTTPException`s are now returned in the response instead of being discarded ([#523](https://github.com/flask-restful/flask-restful/pull/523))
+- Marshalling now checks for a `__marshallable__` method first before defaulting back to `__getitem__` ([](https://github.com/flask-restful/flask-restful/issues/324))
+- Flask 1.0 compatability fixes ([#506](https://github.com/flask-restful/flask-restful/pull/506))
+
+Version 0.3.4
+-------------
+
+Released July 20, 2015
+
+- Fixed issue where `abort()` and `raise Exception` were not equivalent ([#205](https://github.com/flask-restful/flask-restful/issues/205))
+- Fixed `RequestParser` settings not being copied properly ([#483](https://github.com/flask-restful/flask-restful/pull/483))
+- Add ability to configure json serializer settings from application config ([#458](https://github.com/flask-restful/flask-restful/pull/458))
+- Project metadata, tests, and examples are now included in source distributions ([#475](https://github.com/flask-restful/flask-restful/issues/475))
+- Various documentation improvements
+
 Version 0.3.3
 -------------
 

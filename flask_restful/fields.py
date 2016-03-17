@@ -35,7 +35,7 @@ def is_indexable_but_not_string(obj):
 
 def get_value(key, obj, default=None):
     """Helper for pulling a keyed value off various types of objects"""
-    if type(key) == int:
+    if isinstance(key, int):
         return _get_value_for_key(key, obj, default)
     elif callable(key):
         return key(obj)
@@ -66,11 +66,11 @@ def to_marshallable_type(obj):
     if obj is None:
         return None  # make it idempotent for None
 
-    if hasattr(obj, '__getitem__'):
-        return obj  # it is indexable it is ok
-
     if hasattr(obj, '__marshallable__'):
         return obj.__marshallable__()
+
+    if hasattr(obj, '__getitem__'):
+        return obj  # it is indexable it is ok
 
     return dict(obj.__dict__)
 

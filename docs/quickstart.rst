@@ -10,8 +10,6 @@ understanding of `Flask <http://flask.pocoo.org>`_, and that you have already
 installed both Flask and Flask-RESTful.  If not, then follow the steps in the
 :ref:`installation` section.
 
-
-
 A Minimal API
 -------------
 
@@ -32,7 +30,6 @@ A minimal Flask-RESTful API looks like this: ::
     if __name__ == '__main__':
         app.run(debug=True)
 
-
 Save this as api.py and run it using your Python interpreter. Note that we've
 enabled `Flask debugging <http://flask.pocoo.org/docs/quickstart/#debug-mode>`_
 mode to provide code reloading and better error messages. ::
@@ -45,13 +42,10 @@ mode to provide code reloading and better error messages. ::
 
     Debug mode should never be used in a production environment!
 
-
 Now open up a new prompt to test out your API using curl ::
 
     $ curl http://127.0.0.1:5000/
     {"hello": "world"}
-
-
 
 Resourceful Routing
 -------------------
@@ -144,6 +138,13 @@ You can also match parts of the path as variables to your resource methods. ::
     api.add_resource(Todo,
         '/todo/<int:todo_id>', endpoint='todo_ep')
 
+.. note ::
+
+    If a request does not match any of your application's endpoints,
+    Flask-RESTful will return a 404 error message with suggestions of other
+    endpoints that closely match the requested endpoint. This can be disabled
+    by setting ``ERROR_404_HELP`` to ``False`` in your application config.
+
 Argument Parsing
 ----------------
 
@@ -158,10 +159,10 @@ has built-in support for request data validation using a library similar to
     parser.add_argument('rate', type=int, help='Rate to charge for this resource')
     args = parser.parse_args()
 
+.. note ::
 
-Note that unlike the argparse module,
-:meth:`reqparse.RequestParser.parse_args` returns a Python dictionary
-instead of a custom data structure.
+    Unlike the argparse module, :meth:`reqparse.RequestParser.parse_args`
+    returns a Python dictionary instead of a custom data structure.
 
 Using the :class:`reqparse` module also gives you sane error messages for
 free. If an argument fails to pass validation, Flask-RESTful will respond with
@@ -175,7 +176,7 @@ The :class:`inputs` module provides a number of included common conversion
 functions such as :meth:`inputs.date` and :meth:`inputs.url`.
 
 Calling ``parse_args`` with ``strict=True`` ensures that an error is thrown if
-the request includes arguments your parser does not define.
+the request includes arguments your parser does not define. ::
 
     args = parser.parse_args(strict=True)
 
@@ -241,7 +242,7 @@ Save this example in api.py ::
             abort(404, message="Todo {} doesn't exist".format(todo_id))
 
     parser = reqparse.RequestParser()
-    parser.add_argument('task', type=str)
+    parser.add_argument('task')
 
 
     # Todo
